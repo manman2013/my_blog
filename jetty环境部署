@@ -1,0 +1,213 @@
+1        环境要求
+
+操作系统：CentOS7.0
+web服务器：jetty_9.2.11
+java环境：jdk1.7_X64
+zookeeper-3.4.6.tar.gz
+ 
+2        依赖库及其他软件
+
+ 
+3        jetty安装步骤
+
+创建jetty用户
+/usr/sbin/groupadd jetty
+/usr/sbin/useradd -g jetty jetty
+passwd jetty
+    密码：wdcloud2015
+ 
+安装jetty
+cd /wdcloud/app/rwdd
+tar -xzvf jetty-distribution-9.2.10.v20150310.tar.gz
+mv jetty-distribution-9.2.10.v20150310 jetty
+chown -R jetty.jetty /wdcloud/app/rwdd/jetty
+ 
+cd /wdcloud/log
+mkdir rwdd
+chown -R jetty.jetty rwdd
+ 
+调度服务部署
+cp ScheduleConsole.war jetty/webapps/
+ 
+jetty启动服务
+su - root
+cd /etc/init.d
+touch jetty
+chmod +x jetty
+vi jetty
+ 
+插入如下内容：
+#!/bin/bash
+#chkconfig:2345 20 90
+#description:jetty
+#processname:jetty
+case $1 in
+          start) su root /wdcloud/app/rwdd/jetty/bin/jetty.sh start;;
+          stop) su root /wdcloud/app/rwdd/jetty/bin/jetty.sh stop;;
+          status) su root /wdcloud/app/rwdd/jetty/bin/jetty.sh status;;
+          restart) su root /wdcloud/app/rwdd/jetty/bin/jetty.sh restart;;
+          *)  echo "require start|stop|status|restart"  ;;
+esac
+设置自动启动
+chkconfig --add jetty
+chkconfig --level 2345 jetty on
+ 
+配置jetty启动脚本
+su - jetty
+cd /wdcloud/app/rwdd/jetty
+mkdir run
+mkdir work
+vi /wdcloud/app/rwdd/jetty/bin/jetty.sh
+ 
+添加第二行下面内容
+JETTY_HOME=/wdcloud/app/rwdd/jetty
+JETTY_RUN=$JETTY_HOME/run
+JETTY_PORT=8080
+JETTY_HOST=127.0.0.1
+JETTY_LOGS=/wdcloud/log/rwdd
+JETTY_BASE=/wdcloud/app/rwdd/jetty
+JETTY_USER=jetty
+JAVA_OPTIONS="-Dfile.encoding=UTF-8 -XX:PermSize=512m -XX:MaxPermSize=1024m  -server -Xms2G -Xmx4G -XX:+HeapDumpOnOutOfMemoryError"
+ 
+ 
+ 
+ 
+4        zookeeper安装步骤
+
+安装zookeeper
+将172.16.40.110/wdcloud/app/zookeeper复制到113,114,115/wdcloud/app/
+ssh root@172.16.40.110
+cd /wdcloud/app/
+scp -r zookeeper root@172.16.40.113:/wdcloud/app/
+scp -r zookeeper root@172.16.40.114:/wdcloud/app/
+scp -r zookeeper root@172.16.40.115:/wdcloud/app/
+ 
+创建zookeeper用户
+/usr/sbin/groupadd zookeeper
+/usr/sbin/useradd -g zookeeper  zookeeper
+passwd zookeeper
+密码：zookeeper
+ 
+ 
+配置zookeeper
+日志级别设置
+conf/log4j.properties为日志设置文件，默认日志级别为INFO，生成环境需要调整为ERROR级别。
+ 
+日志路径设置
+bin/zkEnv.sh文件中做如下设置调整日志存放路径：
+if [ "x${ZOO_LOG_DIR}" = "x" ]
+then
+ZOO_LOG_DIR="/wdcloud/log/zookeeper"
+  
+配置zoo.cfg文件设置
+server.1=172.16.40.113:2888:3888
+server.2=172.16.40.114:2888:3888
+server.3=172.16.40.115:2888:3888
+ 
+创建myid文件，添加ID, server.ID=172.16.40.113:2888:3888
+touch /wdcloud/data/zookeeper/myid
+vi /wdcloud/data/zookeeper/myid
+添加ID
+ 
+创建目录
+mkdir /wdcloud/data/zookeeper
+mkdir /wdcloud/log/zookeeper
+ 
+目录授权
+chown -R zookeeper.zookeeper /wdcloud/app/zookeeper
+chown -R zookeeper.zookeeper /wdcloud/data/zookeeper
+chown -R zookeeper.zookeeper /wdcloud/log/zookeeper
+ 
+设置服务自启动
+cd /etc/init.d
+touch zookeeper
+chmod +x zookeeper
+vi zookeeper
+#!/bin/bash
+#chkconfig:2345 20 90
+#description:zookeeper
+#processname:zookeeper
+case $1 in
+          start) su zookeeper /wdcloud/app/zookeeper/bin/zkServer.sh start;;
+          stop) su zookeeper /wdcloud/app/zookeeper/bin/zkServer.sh stop;;
+          status) su zookeeper /wdcloud/app/zookeeper/bin/zkServer.sh status;;
+          restart) su zookeeper /wdcloud/app/zookeeper/bin/zkServer.sh restart;;
+          *)  echo "require start|stop|status|restart"  ;;
+esac
+ 
+chkconfig --add zookeeper
+chkconfig --level 2345 zookeeper on
+ 
+验证服务
+cd /wdcloud/app/zookeeper/
+bin/zkServer.sh status
+ 
+
+ 
+5        软件配置
+
+ 
+ 
+ 
+ 
+ 
+4.1  调度服务初始化配置
+
+http://192.168.6.65:8080/ScheduleConsole/schedule/index.jsp?manager=true
+
+修改如下：
+Zookeeper地址：172.16.40.113:2181,172.16.40.114:2181,172.16.40.115:2181
+Zookeeper超时：60000
+Zookeeper根目录：/wjzhnode
+Zookeeper用户：admin
+Zookeeper密码：111111
+ 
+点击保存，无视红字，然后点击管理页面，进入下图
+
+ 
+点击import配置数据，将congig.txt中的内容复制
+
+点击导入
+ 
+4.2  调度策略配置
+
+ 
+视频调度策略：VideoFileTask-Strategy 
+Ppt调度策略：pptTask-Strategy
+文档调度策略：wdzmTask-Strategy
+描述：点击编辑，在ip地址一栏修改转换服务所在地址，测试方便可以直接设置127.0.0.1
+最大线程组数量：配置成转换的机器数
+
+ 
+pptTask-Strategy配置：
+最大线程组数：4
+IP地址：172.16.30.121,172.16.30.122,172.16.30.123,172.16.30.124,192.168.0.90
+ 
+wdzmTask-Strategy配置：
+最大线程组数：4
+IP地址：172.16.30.121,172.16.30.122,172.16.30.123,172.16.30.124,192.168.0.90
+ 
+VideoFileTask-Strategy配置：
+最大线程组数：2
+IP地址：172.16.30.114,172.16.30.115
+ 
+ 
+ 
+4.3  任务管理配置
+
+导入的配置信息如图，只关注“任务项”，这个值要和策略中的“最大线程组数量”数量一致，
+如图都是15个的数量级（单数不补零，双数补零）
+
+ 
+pptTask配置
+线程数：1
+任务项：0,1,2,3
+ 
+wdzmTask配置
+线程数：10
+任务项：0,1,2,3
+ 
+videoFileTaskBean配置
+线程数：2
+任务项：0,1
+ 
