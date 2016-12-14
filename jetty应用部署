@@ -1,0 +1,41 @@
+1.创建jetty用户
+
+/usr/sbin/groupadd jetty
+/usr/sbin/useradd -g jetty jetty
+passwd jetty
+密码：wdcloud2015
+
+2.安装jetty
+cd /wdcloud/app/rwdd
+tar -xzvf jetty-distribution-9.2.10.v20150310.tar.gz
+mv jetty-distribution-9.2.10.v20150310 jetty
+chown -R jetty.jetty /wdcloud/app/rwdd/jetty
+cd /wdcloud/log
+mkdir rwdd
+chown -R jetty.jetty rwdd
+
+3.配置jdk环境变量
+在/etc/profile
+末尾添加如下内容： 
+export JAVA_HOME=/usr/lib/jdk1.7.0_67  
+export JRE_HOME=/usr/lib/jdk1.7.0_67 /jre  
+export CLASSPATH=.:$JAVA_HOME/lib:$JRE_HOME/lib:$CLASSPATH 
+export PATH=$JAVA_HOME/bin:$JRE_HOME/bin:$PATH
+
+#JAVA_HOME
+export JAVA_HOME=/wdcloud/app/java/jdk1.7.0_80
+export JRE_HOME=$JAVA_HOME/jre
+export CLASSPATH=.:$JAVA_HOME/lib:$JRE_HOME/lib
+export PATH=$JAVA_HOME/bin:$PATH
+
+执行如下命令：
+source /etc/profile
+
+4.设置jetty启动软连接
+ln -s /wdcloud/app/jetty_sjtb/bin/jetty.sh /etc/init.d/jetty_sjtb
+
+5.设置自启动脚本
+chkconfig --add jetty_sjtb 
+chkconfig --level 2345 jetty_sjtb on
+
+
